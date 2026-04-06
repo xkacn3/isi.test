@@ -152,7 +152,7 @@ button:disabled {
 
 <script>
 
-const APPS_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbwBOPnNVif4pofeHLn2kEonnb6gfN0OGEgSxu2qmjl12wyOod2vtGSoB-Ze7Ohf4Q/exec";
+const APPS_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbyanS67G8Ekdh_LK_lv6B_EnqBt6OGwzVetk5Adcs37gq2zEa8vidpvOV0pLczp1TVz/exec";
 
 const questions = [
     "1. Ťažkosti so zaspávaním",
@@ -204,15 +204,17 @@ async function saveToSheets(submission) {
     statusEl.textContent = "⏳ Ukladám výsledky...";
 
     try {
-        // Google Apps Script requires no-cors for POST from static pages
+        // Use FormData so Apps Script receives it via e.parameter.payload
+        const formData = new FormData();
+        formData.append("payload", JSON.stringify(submission));
+
         await fetch(APPS_SCRIPT_URL, {
             method: "POST",
-            mode: "no-cors",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify(submission)
+            mode: "no-cors",   // required for cross-origin to Apps Script
+            body: formData
         });
 
-        // no-cors means we can't read the response body, but no thrown exception = request delivered
+        // With no-cors we can't read the response, but no exception = delivered
         statusEl.className = "save-status success";
         statusEl.textContent = "✅ Výsledky boli úspešne uložené.";
     } catch (err) {
