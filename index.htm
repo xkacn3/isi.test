@@ -31,15 +31,15 @@ p {
 }
 
 .intro-space {
-    margin-bottom: 30px; /* väčšia medzera po poslednom odseku */
+    margin-bottom: 30px;
 }
 
 .separator {
-    border: 0;                 /* odstráni default hranicu */
-    height: 2px;               /* hrúbka čiary */
-    background: #27c499;       /* farba čiary */
-    margin: 30px 0;            /* medzera nad a pod čiarou */
-    border-radius: 5px;        /* jemné zaoblenie */
+    border: 0;
+    height: 2px;
+    background: #27c499;
+    margin: 30px 0;
+    border-radius: 5px;
 }
 
 .footer-note {
@@ -73,14 +73,6 @@ p {
     cursor: pointer;
 }
 
-.scale-labels {
-    display: flex;
-    justify-content: space-between;
-    font-size: 12px;
-    margin-top: 5px;
-    opacity: 0.8;
-}
-
 button {
     background: #29AB87;
     color: white;
@@ -96,6 +88,12 @@ button:hover {
     background: #239b78;
 }
 
+button:disabled {
+    background: #1a6e55;
+    cursor: not-allowed;
+    opacity: 0.7;
+}
+
 .result {
     margin-top: 25px;
     padding: 20px;
@@ -103,78 +101,132 @@ button:hover {
     border-radius: 10px;
     display: none;
 }
+
+.save-status {
+    margin-top: 15px;
+    padding: 10px 15px;
+    border-radius: 8px;
+    font-size: 14px;
+    display: none;
+}
+
+.save-status.saving {
+    background: #1a5c4e;
+    color: #7ecdba;
+    display: block;
+}
+
+.save-status.success {
+    background: #1a4a2e;
+    color: #5ddc8c;
+    display: block;
+}
+
+.save-status.error {
+    background: #4a1a1a;
+    color: #dc5d5d;
+    display: block;
+}
 </style>
 </head>
 
 <body>
 
 <div class="container">
-<h1>Index závažnosti nespavosti (ISI)</h1>
+    <h1>Index závažnosti nespavosti (ISI)</h1>
 
-<p><strong>Pre každú otázku</strong> vyberte číslo, ktoré najlepšie zodpovedá Vašim problémom so spánkom za <strong>POSLEDNÝ MESIAC</strong>.</p>
+    <p><strong>Pre každú otázku</strong> vyberte číslo, ktoré najlepšie zodpovedá Vašim problémom so spánkom za <strong>POSLEDNÝ MESIAC</strong>.</p>
 
-<p class="intro-space">Pri prvých troch otázkach hodnotíte <strong>ZÁVAŽNOSŤ problémov</strong>.</p>
+    <p class="intro-space">Pri prvých troch otázkach hodnotíte <strong>ZÁVAŽNOSŤ problémov</strong>.</p>
 
-<hr class="separator">
+    <hr class="separator">
 
-<form id="isiForm"></form>
+    <form id="isiForm"></form>
 
-<button onclick="calculate()">Zobraziť výsledok</button>
+    <button id="submitBtn" onclick="calculate()">Zobraziť výsledok</button>
 
-<div class="result" id="result"></div>
+    <div class="save-status" id="saveStatus"></div>
+
+    <div class="result" id="result"></div>
 </div>
 
 <script>
 
+const APPS_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbwBOPnNVif4pofeHLn2kEonnb6gfN0OGEgSxu2qmjl12wyOod2vtGSoB-Ze7Ohf4Q/exec";
+
 const questions = [
-"1. Ťažkosti so zaspávaním",
-"2. Ťažkosti s udržaním spánku",
-"3. Príliš skoré ranné budenie",
-"4. Ako spokojný/á ste so svojím súčasným spánkovým režimom?",
-"5. Do akej miery Váš problém so spánkom ovplyvňuje Váš denný život (únava, koncentrácia, nálada, pamäť)?",
-"6. Do akej miery si podľa Vás ostatní všímajú Váš problém so spánkom?",
-"7. Ako veľmi vás trápi/znepokojuje váš súčasný problém so spánkom?"
+    "1. Ťažkosti so zaspávaním",
+    "2. Ťažkosti s udržaním spánku",
+    "3. Príliš skoré ranné budenie",
+    "4. Ako spokojný/á ste so svojím súčasným spánkovým režimom?",
+    "5. Do akej miery Váš problém so spánkom ovplyvňuje Váš denný život (únava, koncentrácia, nálada, pamäť)?",
+    "6. Do akej miery si podľa Vás ostatní všímajú Váš problém so spánkom?",
+    "7. Ako veľmi vás trápi/znepokojuje váš súčasný problém so spánkom?"
 ];
 
 const labels = [
-["Vôbec","Mierne","Stredne","Výrazne","Veľmi výrazne"],
-["Vôbec","Mierne","Stredne","Výrazne","Veľmi výrazne"],
-["Vôbec","Mierne","Stredne","Výrazne","Veľmi výrazne"],
-["Veľmi spokojný/á","Spokojný/á","Neutrálny/á","Nespokojný/á","Veľmi nespokojný/á"],
-["Vôbec","Trochu","Stredne","Veľmi","Extrémne"],
-["Vôbec","Trochu","Stredne","Veľmi","Extrémne"],
-["Vôbec","Trochu","Stredne","Veľmi","Extrémne"]
+    ["Vôbec","Mierne","Stredne","Výrazne","Veľmi výrazne"],
+    ["Vôbec","Mierne","Stredne","Výrazne","Veľmi výrazne"],
+    ["Vôbec","Mierne","Stredne","Výrazne","Veľmi výrazne"],
+    ["Veľmi spokojný/á","Spokojný/á","Neutrálny/á","Nespokojný/á","Veľmi nespokojný/á"],
+    ["Vôbec","Trochu","Stredne","Veľmi","Extrémne"],
+    ["Vôbec","Trochu","Stredne","Veľmi","Extrémne"],
+    ["Vôbec","Trochu","Stredne","Veľmi","Extrémne"]
 ];
 
+// Build form questions dynamically
 const form = document.getElementById("isiForm");
 
 questions.forEach((q, i) => {
     const div = document.createElement("div");
     div.className = "question";
 
-let scale = '<ul class="likert">';
-for (let j = 0; j < 5; j++) {
-    scale += `
-        <li>
-            <div style="font-size:12px; margin-bottom:5px;">
-                ${labels[i][j]}
-            </div>
-            <input type="radio" name="q${i}" value="${j}">
-        </li>
-    `;
-}
-scale += '</ul>';
+    let scale = '<ul class="likert">';
+    for (let j = 0; j < 5; j++) {
+        scale += `
+            <li>
+                <div style="font-size:12px; margin-bottom:5px;">${labels[i][j]}</div>
+                <input type="radio" name="q${i}" value="${j}">
+            </li>
+        `;
+    }
+    scale += '</ul>';
 
-    div.innerHTML = `
-        <label>${q}</label>
-        ${scale}
-    `;
-
+    div.innerHTML = `<label>${q}</label>${scale}`;
     form.appendChild(div);
 });
 
-function calculate() {
+// ─── SAVE TO GOOGLE SHEETS ───────────────────────────────────────────────────
+
+async function saveToSheets(submission) {
+    const statusEl = document.getElementById("saveStatus");
+    statusEl.className = "save-status saving";
+    statusEl.textContent = "⏳ Ukladám výsledky...";
+
+    try {
+        // Google Apps Script requires no-cors for POST from static pages
+        await fetch(APPS_SCRIPT_URL, {
+            method: "POST",
+            mode: "no-cors",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify(submission)
+        });
+
+        // no-cors means we can't read the response body, but no thrown exception = request delivered
+        statusEl.className = "save-status success";
+        statusEl.textContent = "✅ Výsledky boli úspešne uložené.";
+    } catch (err) {
+        console.error(err);
+        statusEl.className = "save-status error";
+        statusEl.textContent = `❌ Chyba pri ukladaní: ${err.message}`;
+    }
+}
+
+// ─── CALCULATE & SUBMIT ──────────────────────────────────────────────────────
+
+async function calculate() {
     let total = 0;
+    const answers = [];
 
     for (let i = 0; i < 7; i++) {
         const checked = document.querySelector(`input[name="q${i}"]:checked`);
@@ -182,26 +234,44 @@ function calculate() {
             alert("Prosím, odpovedzte na všetky otázky.");
             return;
         }
-        total += parseInt(checked.value);
+        const val = parseInt(checked.value);
+        total += val;
+        answers.push({
+            question: questions[i],
+            answer_index: val,
+            answer_label: labels[i][val]
+        });
     }
 
     let resultText = "";
+    if      (total <= 7)  resultText = "Bez klinicky významnej nespavosti";
+    else if (total <= 14) resultText = "Subklinická (mierna) nespavosť";
+    else if (total <= 21) resultText = "Klinická nespavosť (stredná)";
+    else                  resultText = "Klinická nespavosť (závažná)";
 
-    if (total <= 7) {
-        resultText = "Bez klinicky významnej nespavosti";
-    } else if (total <= 14) {
-        resultText = "Subklinická (mierna) nespavosť";
-    } else if (total <= 21) {
-        resultText = "Klinická nespavosť (stredná)";
-    } else {
-        resultText = "Klinická nespavosť (závažná)";
-    }
-
-    document.getElementById("result").style.display = "block";
-    document.getElementById("result").innerHTML = `
+    // Show result to user
+    const resultEl = document.getElementById("result");
+    resultEl.style.display = "block";
+    resultEl.innerHTML = `
         <h2>Vaše skóre: ${total} / 28</h2>
         <p><strong>${resultText}</strong></p>
     `;
+
+    // Disable button to prevent double-submit
+    const btn = document.getElementById("submitBtn");
+    btn.disabled = true;
+
+    // Build submission object
+    const submission = {
+        timestamp: new Date().toISOString(),
+        score: total,
+        category: resultText,
+        answers: answers
+    };
+
+    await saveToSheets(submission);
+
+    btn.disabled = false;
 }
 
 </script>
@@ -209,6 +279,6 @@ function calculate() {
 </body>
 
 <div class="footer-note">
-© Morin, C.M. (1993, 1996, 2000, 2006).
+    © Morin, C.M. (1993, 1996, 2000, 2006).
 </div>
 </html>
